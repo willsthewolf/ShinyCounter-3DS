@@ -25,7 +25,7 @@ A simple **on-screen encounter counter** for shiny hunting on a modded 3DS. It's
 ### Installation
 1. Download `ShinyCounter.3gx` from [Releases](../../releases).
 2. Copy it to your SD card at `luma/plugins/<TitleID>/`
-   (or as `luma/plugins/default.3gx` to load it in every game).
+   (or as `luma/plugins/default.3gx` to load it in every game). If you don't have a pluggins/titleID folder you can just create it inside luma.
 3. Open the Rosalina menu (**L + Down + Select**), set **Plugin Loader** to **Enabled** and choose **Save settings**.
 4. Start the game. The screen flashes blue when the plugin loads.
 
