@@ -1,105 +1,141 @@
-#include <3ds.h>
-#include "csvc.h"
-#include <CTRPluginFramework.hpp>
+// Shiny Counter - plugin .3gx para Luma3DS (CTRPluginFramework)
+// Dibuja un contador en la pantalla inferior y lo guarda en la SD.
 
-#include <vector>
+#include <3ds.h>
+#include <CTRPluginFramework.hpp>
+#include <string>
+#include <cstdlib>
 
 namespace CTRPluginFramework
 {
-    // This patch the NFC disabling the touchscreen when scanning an amiibo, which prevents ctrpf to be used
-    static void    ToggleTouchscreenForceOn(void)
+    // ================== CONFIGURACIÓN ==================
+    // Botones que se mantienen pulsados + botón que dispara la acción.
+    // L+R+Start coincide con el reinicio de Sol/Luna: cada reset suma 1.
+    static const u32 MODIFICADOR = Key::L | Key::R;
+    static const u32 BTN_SUMAR   = Key::Start;      // L + R + Start     -> +1
+    static const u32 BTN_RESTAR  = Key::Select;     // L + R + Select    -> -1
+    static const u32 BTN_OCULTAR = Key::DPadLeft;   // L + R + Izquierda -> mostrar/ocultar
+
+    // El menú del plugin se abre con Select por defecto, lo que chocaría
+    // con L+R+Select. Lo movemos a L + R + Abajo.
+    static const u32 TECLA_MENU  = Key::L | Key::R | Key::DPadDown;
+
+    static const char *RUTA_GUARDADO = "/shiny_counter.txt"; // raíz de la SD
+    static const u32 POS_X = 5;
+    static const u32 POS_Y = 5;
+    // ===================================================
+
+    static u32  g_count   = 0;
+    static bool g_visible = true;
+
+    static void Cargar()
     {
-        static u32 original = 0;
-        static u32 *patchAddress = nullptr;
-
-        if (patchAddress && original)
-        {
-            *patchAddress = original;
-            return;
-        }
-
-        static const std::vector<u32> pattern =
-        {
-            0xE59F10C0, 0xE5840004, 0xE5841000, 0xE5DD0000,
-            0xE5C40008, 0xE28DD03C, 0xE8BD80F0, 0xE5D51001,
-            0xE1D400D4, 0xE3510003, 0x159F0034, 0x1A000003
-        };
-
-        Result  res;
-        Handle  processHandle;
-        s64     textTotalSize = 0;
-        s64     startAddress = 0;
-        u32 *   found;
-
-        if (R_FAILED(svcOpenProcess(&processHandle, 16)))
+        File f;
+        if (File::Open(f, RUTA_GUARDADO, File::READ) != 0)
             return;
 
-        svcGetProcessInfo(&textTotalSize, processHandle, 0x10002);
-        svcGetProcessInfo(&startAddress, processHandle, 0x10005);
-        if(R_FAILED(svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x14000000, processHandle, (u32)startAddress, textTotalSize)))
-            goto exit;
+        char buf[16] = {0};
+        u32 size = static_cast<u32>(f.GetSize());
+        if (size > sizeof(buf) - 1)
+            size = sizeof(buf) - 1;
+        f.Read(buf, size);
+        f.Close();
 
-        found = (u32 *)Utils::Search<u32>(0x14000000, (u32)textTotalSize, pattern);
+        g_count = static_cast<u32>(std::strtoul(buf, nullptr, 10));
+    }
 
-        if (found != nullptr)
+    static void Guardar()
+    {
+        File f;
+        if (File::Open(f, RUTA_GUARDADO, File::WRITE | File::CREATE | File::TRUNCATE) != 0)
+            return;
+
+        std::string s = std::to_string(g_count);
+        f.Write(s.c_str(), s.size());
+        f.Close();
+    }
+
+    // Se llama en cada frame: lee los botones.
+    static void CadaFrame(Time)
+    {
+        if (!Controller::IsKeysDown(MODIFICADOR))
+            return;
+
+        if (Controller::IsKeyPressed(static_cast<Key>(BTN_SUMAR)))
         {
-            original = found[13];
-            patchAddress = (u32 *)PA_FROM_VA((found + 13));
-            found[13] = 0xE1A00000;
+            g_count++;
+            Guardar();
         }
-
-        svcUnmapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x14000000, textTotalSize);
-exit:
-        svcCloseHandle(processHandle);
-    }
-
-    // This function is called before main and before the game starts
-    // Useful to do code edits safely
-    void    PatchProcess(FwkSettings &settings)
-    {
-        ToggleTouchscreenForceOn();
-    }
-
-    // This function is called when the process exits
-    // Useful to save settings, undo patchs or clean up things
-    void    OnProcessExit(void)
-    {
-        ToggleTouchscreenForceOn();
-    }
-
-    void    InitMenu(PluginMenu &menu)
-    {
-        // Create your entries here, or elsewhere
-        // You can create your entries whenever/wherever you feel like it
-        
-        // Example entry
-        /*menu += new MenuEntry("Test", nullptr, [](MenuEntry *entry)
+        else if (Controller::IsKeyPressed(static_cast<Key>(BTN_RESTAR)))
         {
-            std::string body("What's the answer ?\n");
-
-            body += std::to_string(42);
-
-            MessageBox("UA", body)();
-        });*/
+            if (g_count > 0)
+                g_count--;
+            Guardar();
+        }
+        else if (Controller::IsKeyPressed(static_cast<Key>(BTN_OCULTAR)))
+        {
+            g_visible = !g_visible;
+        }
     }
 
-    int     main(void)
+    // Overlay: dibuja el número en la pantalla inferior.
+    static bool DibujarContador(const Screen &screen)
     {
-        PluginMenu *menu = new PluginMenu("Action Replay", 0, 8, 0,
-                                            "A blank template plugin.\nGives you access to the ActionReplay and others tools.");
+        if (!g_visible || screen.IsTop)
+            return false;
 
-        // Synnchronize the menu with frame event
+        screen.Draw("Encuentros: " + std::to_string(g_count), POS_X, POS_Y,
+                    Color::White, Color::Black);
+        return true;
+    }
+
+    void PatchProcess(FwkSettings &settings)
+    {
+        settings.MenuHotkeys = TECLA_MENU;
+    }
+
+    void OnProcessExit(void)
+    {
+        Guardar();
+    }
+
+    int main(void)
+    {
+        PluginMenu *menu = new PluginMenu("Shiny Counter", 1, 0, 0,
+            "Contador superpuesto para shiny hunting.\n"
+            "L+R+Start: +1   L+R+Select: -1\n"
+            "L+R+Izquierda: ocultar   L+R+Abajo: este menu");
+
         menu->SynchronizeWithFrame(true);
+        menu->ShowWelcomeMessage(false);
 
-        // Init our menu entries & folders
-        InitMenu(*menu);
+        Cargar();
+        OSD::Run(DibujarContador);
+        menu->OnNewFrame = CadaFrame;
 
-        // Launch menu and mainloop
+        // Opciones dentro del menú del plugin (se abre con L+R+Abajo)
+        menu->Append(new MenuEntry("Fijar valor", nullptr, [](MenuEntry *)
+        {
+            Keyboard kb("Nuevo valor del contador:");
+            u32 valor = g_count;
+            if (kb.Open(valor, g_count) >= 0)
+            {
+                g_count = valor;
+                Guardar();
+            }
+        }));
+
+        menu->Append(new MenuEntry("Poner a 0", nullptr, [](MenuEntry *)
+        {
+            if (MessageBox("¿Poner el contador a 0?", DialogType::DialogYesNo)())
+            {
+                g_count = 0;
+                Guardar();
+            }
+        }));
+
         menu->Run();
-
         delete menu;
-
-        // Exit plugin
-        return (0);
+        return 0;
     }
 }
