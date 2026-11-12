@@ -15,10 +15,7 @@ namespace CTRPluginFramework
     static const u32 BTN_SUMAR   = Key::Start;      // L + R + Start     -> +1
     static const u32 BTN_RESTAR  = Key::Select;     // L + R + Select    -> -1
     static const u32 BTN_OCULTAR = Key::DPadLeft;   // L + R + Izquierda -> mostrar/ocultar
-
-    // El menú del plugin se abre con Select por defecto, lo que chocaría
-    // con L+R+Select. Lo movemos a L + R + Abajo.
-    static const u32 TECLA_MENU  = Key::L | Key::R | Key::DPadDown;
+    // Nota: el menú del plugin se abre con Select.
 
     static const char *RUTA_GUARDADO = "/shiny_counter.txt"; // raíz de la SD
     static const u32 POS_X = 5;
@@ -89,10 +86,7 @@ namespace CTRPluginFramework
         return true;
     }
 
-    void PatchProcess(FwkSettings &settings)
-    {
-        settings.MenuHotkeys = TECLA_MENU;
-    }
+    void PatchProcess(FwkSettings &settings) { }
 
     void OnProcessExit(void)
     {
@@ -104,7 +98,7 @@ namespace CTRPluginFramework
         PluginMenu *menu = new PluginMenu("Shiny Counter", 1, 0, 0,
             "Contador superpuesto para shiny hunting.\n"
             "L+R+Start: +1   L+R+Select: -1\n"
-            "L+R+Izquierda: ocultar   L+R+Abajo: este menu");
+            "L+R+Izquierda: ocultar   Select: este menu");
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);
@@ -113,7 +107,7 @@ namespace CTRPluginFramework
         OSD::Run(DibujarContador);
         menu->OnNewFrame = CadaFrame;
 
-        // Opciones dentro del menú del plugin (se abre con L+R+Abajo)
+        // Opciones dentro del menú del plugin (se abre con Select)
         menu->Append(new MenuEntry("Fijar valor", nullptr, [](MenuEntry *)
         {
             Keyboard kb("Nuevo valor del contador:");
@@ -139,5 +133,3 @@ namespace CTRPluginFramework
         return 0;
     }
 }
-
-
