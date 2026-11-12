@@ -1,28 +1,64 @@
-# CTRPluginFramework - Blank Template
-A blank CTRPF plugin to be used by [Luma3DS](https://github.com/LumaTeam/Luma3DS).
+# ShinyCounter 3DS
 
-A list of [all the code types supported by the ActionReplay is available here](https://gist.github.com/Nanquitas/d6c920a59c757cf7917c2bffa76de860).
+**[English](#english)**
 
-## Action Replay Usage
+---
+A simple **on-screen encounter counter** for shiny hunting on a modded 3DS. It's a `.3gx` plugin for Luma3DS that draws the count on the bottom screen while you play, so you don't need to count on your phone.
 
-[![Click to play on YouTube](https://img.youtube.com/vi/c2258P9wKkA/0.jpg)](https://www.youtube.com/watch?v=c2258P9wKkA)
+### Features
+- Counter shown on the bottom screen while you play
+- Add / subtract with button combos
+- Saved to the SD card on every change, so you keep it after resets and power-offs
+- Set the value by hand or reset it to 0 from the plugin menu
 
-## Screenshots
+### Controls
+| Combo | Action |
+|---|---|
+| **L + Up** | +1 |
+| **L + Down** | −1 |
+| **L + Left** | Show / hide counter |
+| **Select** | Open plugin menu (set value in hexadecimal, reset to 0, enable/disable counter) |
 
-![](https://i.imgur.com/ayvcaN0.png)
-![](https://i.imgur.com/9OJop01.png)
-##### Search
-![](https://i.imgur.com/gczUI1r.png)
-![](https://i.imgur.com/Yhhcsot.png)
-![](https://i.imgur.com/7lVmuDd.png)
-##### Action Replay
-![](https://i.imgur.com/uW6lnjm.png)
-![](https://i.imgur.com/4QAEgSO.png)
-![](https://i.imgur.com/bJFQw04.png)
-![](https://i.imgur.com/8pZhhmo.png)
-![](https://i.imgur.com/b3Gl29H.png)
-##### Hex Editor
-![](https://i.imgur.com/8z2DCcm.png)
-![](https://i.imgur.com/t3gutXU.png)
-![](https://i.imgur.com/U4ratx4.png)
-![](https://i.imgur.com/uJBJZ8K.png)
+*The plugin menu is currently in Spanish.*
+
+### Requirements
+- A 3DS with **Luma3DS v13 or newer** (the plugin loader is built in)
+- Works with cartridges and digital games
+
+### Installation
+1. Download `ShinyCounter.3gx` from [Releases](../../releases).
+2. Copy it to your SD card at `luma/plugins/<TitleID>/`
+   (or as `luma/plugins/default.3gx` to load it in every game).
+3. Open the Rosalina menu (**L + Down + Select**), set **Plugin Loader** to **Enabled** and choose **Save settings**.
+4. Start the game. The screen flashes blue when the plugin loads.
+
+| Game | Title ID |
+|---|---|
+| Pokémon Sun | `0004000000164800` |
+| Pokémon Moon | `0004000000175E00` |
+| Pokémon Ultra Sun | `00040000001B5000` |
+| Pokémon Ultra Moon | `00040000001B5100` |
+
+You can check any game's Title ID in FBI → Titles.
+
+> Luma loads only **one** plugin per game. If you already use another plugin for that game, you'll have to choose one.
+
+### Tested on
+- Pokémon Ultra Sun (EUR, cartridge)
+
+The plugin doesn't modify game memory, so it should work in other games too. Reports are welcome.
+
+The count is stored in `shiny_counter.txt` at the root of the SD card.
+
+### Building
+Requires devkitPro (`3ds-dev`), `libctrpf` and `3gxtool`. Then run `make`. The repository also builds automatically with GitHub Actions on every push.
+
+
+## Credits
+- **Nanquitas**: [CTRPluginFramework](https://gitlab.com/thepixellizeross/ctrpluginframework)
+- **PabloMK7**: [CTRPluginFramework-BlankTemplate](https://github.com/PabloMK7/CTRPluginFramework-BlankTemplate) and the Luma3DS plugin loader
+- **ThePixellizerOSS**: CTRPluginFramework maintenance and packages
+- **LumaTeam**: [Luma3DS](https://github.com/LumaTeam/Luma3DS)
+- Made with help from Claude (Anthropic) / Hecho con ayuda de Claude (Anthropic)
+
+## License
