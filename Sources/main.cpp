@@ -25,11 +25,14 @@ namespace CTRPluginFramework
     static u32  g_count   = 0;
     static bool g_visible = true;
     static volatile bool g_saliendo = false;   // true mientras el juego se cierra/reinicia
-    static std::string g_texto = "Encuentros: 0"; // texto ya preparado para el overlay
+    // Texto ya preparado para el overlay. Es un puntero que se crea en main()
+    // y nunca se libera: así no hay destructores globales al cerrar el juego.
+    static std::string *g_texto = nullptr;
 
     static void ActualizarTexto()
     {
-        g_texto = "Encuentros: " + std::to_string(g_count);
+        if (g_texto)
+            *g_texto = "Encuentros: " + std::to_string(g_count);
     }
 
     static void Cargar()
@@ -59,8 +62,9 @@ namespace CTRPluginFramework
         f.Close();
     }
 
-    // Se llama en cada frame: lee los botones.
-    static void CadaFrame(Time)
+    // Se llama en cada frame mientras la entrada "Contador activo" está
+    // marcada en el menú del plugin (viene marcada por defecto).
+    static void CadaFrame(MenuEntry *)
     {
         if (g_saliendo || !Controller::IsKeysDown(MODIFICADOR))
             return;
@@ -89,10 +93,10 @@ namespace CTRPluginFramework
     {
         // No se crean strings aquí: esta función corre en cada frame,
         // también mientras el juego se está reiniciando.
-        if (g_saliendo || !g_visible || screen.IsTop)
+        if (g_saliendo || !g_visible || screen.IsTop || !g_texto)
             return false;
 
-        screen.Draw(g_texto, POS_X, POS_Y, Color::White, Color::Black);
+        screen.Draw(*g_texto, POS_X, POS_Y, Color::White, Color::Black);
         return true;
     }
 
@@ -116,10 +120,16 @@ namespace CTRPluginFramework
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);
 
+        g_texto = new std::string();
         Cargar();
         ActualizarTexto();
         OSD::Run(DibujarContador);
-        menu->OnNewFrame = CadaFrame;
+
+        // Entrada que lee los botones en cada frame del juego.
+        MenuEntry *contador = new MenuEntry("Contador activo", CadaFrame,
+            "Desmarca esto para que L+Arriba/Abajo/Izquierda no hagan nada.");
+        menu->Append(contador);
+        contador->Enable();
 
         // Opciones dentro del menú del plugin (se abre con Select)
         menu->Append(new MenuEntry("Fijar valor", nullptr, [](MenuEntry *)
@@ -145,7 +155,11 @@ namespace CTRPluginFramework
         }));
 
         menu->Run();
-        delete menu;
+
+        // Al reiniciar el juego, menu->Run() termina y llegamos aquí.
+        // No hacemos "delete menu": destruir el menú mientras el juego se
+        // cierra es el sospechoso principal del cuelgue al reiniciar.
+        // La memoria se libera igual al cerrarse el proceso.
         return 0;
     }
 }
