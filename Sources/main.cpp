@@ -10,11 +10,11 @@ namespace CTRPluginFramework
 {
     // ================== CONFIGURACIÓN ==================
     // Botones que se mantienen pulsados + botón que dispara la acción.
-    // L+R+Start coincide con el reinicio de Sol/Luna: cada reset suma 1.
-    static const u32 MODIFICADOR = Key::L | Key::R;
-    static const u32 BTN_SUMAR   = Key::Start;      // L + R + Start     -> +1
-    static const u32 BTN_RESTAR  = Key::Select;     // L + R + Select    -> -1
-    static const u32 BTN_OCULTAR = Key::DPadLeft;   // L + R + Izquierda -> mostrar/ocultar
+    // Combinaciones separadas del reinicio (L+R+Start) para no interferir.
+    static const u32 MODIFICADOR = Key::L;
+    static const u32 BTN_SUMAR   = Key::DPadUp;     // L + Arriba    -> +1
+    static const u32 BTN_RESTAR  = Key::DPadDown;   // L + Abajo     -> -1
+    static const u32 BTN_OCULTAR = Key::DPadLeft;   // L + Izquierda -> mostrar/ocultar
     // Nota: el menú del plugin se abre con Select.
 
     static const char *RUTA_GUARDADO = "/shiny_counter.txt"; // raíz de la SD
@@ -24,6 +24,13 @@ namespace CTRPluginFramework
 
     static u32  g_count   = 0;
     static bool g_visible = true;
+    static volatile bool g_saliendo = false;   // true mientras el juego se cierra/reinicia
+    static std::string g_texto = "Encuentros: 0"; // texto ya preparado para el overlay
+
+    static void ActualizarTexto()
+    {
+        g_texto = "Encuentros: " + std::to_string(g_count);
+    }
 
     static void Cargar()
     {
@@ -55,18 +62,20 @@ namespace CTRPluginFramework
     // Se llama en cada frame: lee los botones.
     static void CadaFrame(Time)
     {
-        if (!Controller::IsKeysDown(MODIFICADOR))
+        if (g_saliendo || !Controller::IsKeysDown(MODIFICADOR))
             return;
 
         if (Controller::IsKeyPressed(static_cast<Key>(BTN_SUMAR)))
         {
             g_count++;
+            ActualizarTexto();
             Guardar();
         }
         else if (Controller::IsKeyPressed(static_cast<Key>(BTN_RESTAR)))
         {
             if (g_count > 0)
                 g_count--;
+            ActualizarTexto();
             Guardar();
         }
         else if (Controller::IsKeyPressed(static_cast<Key>(BTN_OCULTAR)))
@@ -78,32 +87,37 @@ namespace CTRPluginFramework
     // Overlay: dibuja el número en la pantalla inferior.
     static bool DibujarContador(const Screen &screen)
     {
-        if (!g_visible || screen.IsTop)
+        // No se crean strings aquí: esta función corre en cada frame,
+        // también mientras el juego se está reiniciando.
+        if (g_saliendo || !g_visible || screen.IsTop)
             return false;
 
-        screen.Draw("Encuentros: " + std::to_string(g_count), POS_X, POS_Y,
-                    Color::White, Color::Black);
+        screen.Draw(g_texto, POS_X, POS_Y, Color::White, Color::Black);
         return true;
     }
 
     void PatchProcess(FwkSettings &settings) { }
 
+    // El juego se cierra (p. ej. reinicio con L+R+Start). El contador ya se
+    // guardó al pulsar el botón, así que aquí solo paramos el overlay.
     void OnProcessExit(void)
     {
-        Guardar();
+        g_saliendo = true;
+        OSD::Stop(DibujarContador);
     }
 
     int main(void)
     {
         PluginMenu *menu = new PluginMenu("Shiny Counter", 1, 0, 0,
             "Contador superpuesto para shiny hunting.\n"
-            "L+R+Start: +1   L+R+Select: -1\n"
-            "L+R+Izquierda: ocultar   Select: este menu");
+            "L+Arriba: +1   L+Abajo: -1\n"
+            "L+Izquierda: ocultar   Select: este menu");
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);
 
         Cargar();
+        ActualizarTexto();
         OSD::Run(DibujarContador);
         menu->OnNewFrame = CadaFrame;
 
@@ -115,6 +129,7 @@ namespace CTRPluginFramework
             if (kb.Open(valor, g_count) >= 0)
             {
                 g_count = valor;
+                ActualizarTexto();
                 Guardar();
             }
         }));
@@ -124,6 +139,7 @@ namespace CTRPluginFramework
             if (MessageBox("¿Poner el contador a 0?", DialogType::DialogYesNo)())
             {
                 g_count = 0;
+                ActualizarTexto();
                 Guardar();
             }
         }));
