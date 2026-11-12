@@ -1,7 +1,4 @@
 # ShinyCounter 3DS
-
-**[English](#english)**
-
 ---
 A simple **on-screen encounter counter** for shiny hunting on a modded 3DS. It's a `.3gx` plugin for Luma3DS that draws the count on the bottom screen while you play, so you don't need to count on your phone.
 
