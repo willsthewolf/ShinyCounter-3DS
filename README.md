@@ -34,6 +34,10 @@ A simple **on-screen encounter counter** for shiny hunting on a modded 3DS. It's
 
 | Game | Title ID |
 |---|---|
+| Pokémon X | `0004000000055D00` |
+| Pokémon Y | `0004000000055E00` |
+| Pokémon Omega Ruby | `000400000011C400` |
+| Pokémon Alpha Sapphire | `000400000011C500` |
 | Pokémon Sun | `0004000000164800` |
 | Pokémon Moon | `0004000000175E00` |
 | Pokémon Ultra Sun | `00040000001B5000` |
@@ -62,3 +66,8 @@ Requires devkitPro (`3ds-dev`), `libctrpf` and `3gxtool`. Then run `make`. The r
 - Made with help from Claude (Anthropic) / Hecho con ayuda de Claude (Anthropic)
 
 ## License
+This project is licensed under the GNU General Public License v3.0 — see [LICENSE](LICENSE).
+
+It uses CTRPluginFramework, which is distributed under its own license
+(see the CTRPluginFramework repository).
+
